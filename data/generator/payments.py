@@ -3,13 +3,14 @@ import csv
 import random
 from datetime import datetime, timedelta
 
-def generate_payments(n: int, seed: int = 42) -> list[dict]:
+def generate_payments(n: int, seed: int = 42, date_window_days: int = 30) -> list[dict]:
     """
     Generate synthetic Razorpay payments data.
     
     Args:
         n (int): Number of payments to generate.
         seed (int): Random seed for reproducibility.
+        date_window_days (int): Number of days to spread payment dates across.
         
     Returns:
         list[dict]: A list of generated payment dictionaries.
@@ -21,8 +22,8 @@ def generate_payments(n: int, seed: int = 42) -> list[dict]:
     for i in range(1, n + 1):
         order_id = f"ORD_{i:03d}"
         amount = round(random.uniform(500.0, 50000.0), 2)
-        # Dates spread across 30 days
-        day_offset = random.randint(0, 29)
+        # Dates spread across date_window_days
+        day_offset = random.randint(0, date_window_days - 1)
         date_str = (base_date + timedelta(days=day_offset)).isoformat()
         
         # 95% captured, 5% failed
