@@ -222,3 +222,6 @@ sessions/
 *.duckdb
 *.pdf
 *.csv
+data/sample/
+data/held_out/
+!data/generator/
