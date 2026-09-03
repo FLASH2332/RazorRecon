@@ -203,13 +203,13 @@ GROQ_TOOL_SCHEMAS = [
         "type": "function",
         "function": {
             "name": "get_settlement_summary",
-            "description": "Get gross, fee, net, refund totals and order list for a settlement batch.",
+            "description": "Get financial breakdown and order list for a settlement batch.",
             "parameters": {
                 "type": "object",
                 "properties": {
                     "settlement_id": {
                         "type": "string",
-                        "description": "The settlement ID to fetch summary for (e.g. setl_XXXXXXXX).",
+                        "description": "Settlement batch identifier.",
                     }
                 },
                 "required": ["settlement_id"],
@@ -220,17 +220,17 @@ GROQ_TOOL_SCHEMAS = [
         "type": "function",
         "function": {
             "name": "find_bank_match",
-            "description": "Find bank credit rows matching this settlement by amount and date window. Returns match_count and list of matching bank rows.",
+            "description": "Find bank credits matching settlement amount and date window.",
             "parameters": {
                 "type": "object",
                 "properties": {
                     "settlement_id": {
                         "type": "string",
-                        "description": "The settlement ID to match against bank credits.",
+                        "description": "Settlement ID to match.",
                     },
                     "date_window_days": {
                         "type": "integer",
-                        "description": "Number of working days after settlement date to search bank records (default 5).",
+                        "description": "Working days window to search (default 5).",
                     },
                 },
                 "required": ["settlement_id"],
@@ -241,21 +241,21 @@ GROQ_TOOL_SCHEMAS = [
         "type": "function",
         "function": {
             "name": "find_settlement_combinations",
-            "description": "Find combinations of settlements that sum to target_amount. Used when bank batched multiple settlements into one credit.",
+            "description": "Find settlement combinations summing to a target bank credit.",
             "parameters": {
                 "type": "object",
                 "properties": {
                     "target_amount": {
                         "type": "number",
-                        "description": "Target bank credit amount to find settlement combinations for.",
+                        "description": "Target bank credit amount.",
                     },
                     "tolerance": {
                         "type": "number",
-                        "description": "Allowed difference between combination sum and target amount (default 10.0).",
+                        "description": "Allowed amount tolerance (default 10.0).",
                     },
                     "max_combo_size": {
                         "type": "integer",
-                        "description": "Maximum number of settlements to combine (default 3).",
+                        "description": "Maximum settlements to combine (default 3).",
                     },
                 },
                 "required": ["target_amount"],
@@ -266,13 +266,13 @@ GROQ_TOOL_SCHEMAS = [
         "type": "function",
         "function": {
             "name": "get_refunds",
-            "description": "Get all refund rows linked to a parent order_id.",
+            "description": "Get refund records linked to an order ID.",
             "parameters": {
                 "type": "object",
                 "properties": {
                     "parent_order_id": {
                         "type": "string",
-                        "description": "The parent order ID to find associated refund records for.",
+                        "description": "Parent order ID.",
                     }
                 },
                 "required": ["parent_order_id"],
@@ -283,7 +283,7 @@ GROQ_TOOL_SCHEMAS = [
         "type": "function",
         "function": {
             "name": "get_unmatched_bank_credits",
-            "description": "Get all razorpay_credit bank rows that need matching.",
+            "description": "Get all unmatched Razorpay bank credit transactions.",
             "parameters": {
                 "type": "object",
                 "properties": {},
@@ -295,13 +295,13 @@ GROQ_TOOL_SCHEMAS = [
         "type": "function",
         "function": {
             "name": "calc_expected_settlement",
-            "description": "Calculate expected bank credit for a settlement after MDR, GST, refunds.",
+            "description": "Calculate expected bank credit after MDR fees and refunds.",
             "parameters": {
                 "type": "object",
                 "properties": {
                     "settlement_id": {
                         "type": "string",
-                        "description": "The settlement ID to compute expected payout for.",
+                        "description": "Settlement ID to calculate payout for.",
                     }
                 },
                 "required": ["settlement_id"],
@@ -312,13 +312,13 @@ GROQ_TOOL_SCHEMAS = [
         "type": "function",
         "function": {
             "name": "classify_narration",
-            "description": "Classify a bank narration string into: razorpay_credit, bank_charge, upi_transfer, neft_transfer, unidentified.",
+            "description": "Classify bank narration into transaction type category.",
             "parameters": {
                 "type": "object",
                 "properties": {
                     "narration": {
                         "type": "string",
-                        "description": "Raw bank statement narration text to classify.",
+                        "description": "Bank statement narration string.",
                     }
                 },
                 "required": ["narration"],
@@ -329,25 +329,18 @@ GROQ_TOOL_SCHEMAS = [
         "type": "function",
         "function": {
             "name": "submit_verdict",
-            "description": (
-                "Submit your investigation verdict for verification. "
-                "proposed_verdict must be one of: confirmed, ambiguous, unresolved. "
-                "evidence must include: expected_amount, actual_amount, tolerance, match_count, bank_txn_id. "
-                "competing is a list of competing explanations (empty if none). "
-                "The system will validate your evidence before recording the verdict. "
-                "You cannot bypass this verification step."
-            ),
+            "description": "Submit investigation verdict and evidence for deterministic verification.",
             "parameters": {
                 "type": "object",
                 "properties": {
                     "record_id": {
                         "type": "string",
-                        "description": "The settlement_id or bank transaction id under review.",
+                        "description": "Settlement or bank transaction ID.",
                     },
                     "proposed_verdict": {
                         "type": "string",
                         "enum": ["confirmed", "ambiguous", "unresolved"],
-                        "description": "Proposed verdict for the record: confirmed, ambiguous, or unresolved.",
+                        "description": "Proposed verdict: confirmed, ambiguous, or unresolved.",
                     },
                     "evidence": {
                         "type": "object",
@@ -367,16 +360,16 @@ GROQ_TOOL_SCHEMAS = [
                     "competing": {
                         "type": "array",
                         "items": {"type": "object"},
-                        "description": "Competing explanations (empty array if none).",
+                        "description": "List of competing explanations if any.",
                     },
                     "strategies_tried": {
                         "type": "array",
                         "items": {"type": "string"},
-                        "description": "List of strategy identifiers attempted.",
+                        "description": "List of attempted strategy names.",
                     },
                     "reasoning": {
                         "type": "string",
-                        "description": "Detailed reasoning explaining the findings.",
+                        "description": "Explanation justifying the proposed verdict.",
                     },
                 },
                 "required": [
