@@ -1,22 +1,9 @@
 import datetime
 import json
-import os
-import sys
 import uuid
 import duckdb
 
-# Ensure engine/tools and project root are in sys.path
-_current_dir = os.path.dirname(os.path.abspath(__file__))
-_project_root = os.path.dirname(os.path.dirname(_current_dir))
-if _project_root not in sys.path:
-    sys.path.insert(0, _project_root)
-if _current_dir not in sys.path:
-    sys.path.insert(0, _current_dir)
-
-try:
-    from engine.tools.ingestion import get_db, init_schema
-except ImportError:
-    from ingestion import get_db, init_schema
+from engine.tools.ingestion import get_db, init_schema
 
 
 def mark_confirmed(
@@ -291,7 +278,7 @@ def get_verdict_summary(session_id: str) -> dict:
 
 if __name__ == "__main__":
     import uuid
-    from ingestion import get_db, init_schema
+    from engine.tools.ingestion import get_db, init_schema
 
     session_id = str(uuid.uuid4())[:8]
     conn = get_db(session_id)

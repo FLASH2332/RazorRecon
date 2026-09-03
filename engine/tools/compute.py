@@ -1,33 +1,13 @@
 import datetime
 import itertools
-import os
-import sys
-import duckdb
 
-# Ensure engine/tools and project root are in sys.path for versatile imports
-_current_dir = os.path.dirname(os.path.abspath(__file__))
-_project_root = os.path.dirname(os.path.dirname(_current_dir))
-if _project_root not in sys.path:
-    sys.path.insert(0, _project_root)
-if _current_dir not in sys.path:
-    sys.path.insert(0, _current_dir)
-
-try:
-    from engine.tools.ingestion import get_db
-    from engine.tools.query import (
-        get_settlement_summary,
-        query_bank,
-        get_all_settlement_ids,
-        get_unmatched_bank_credits,
-    )
-except ImportError:
-    from ingestion import get_db
-    from query import (
-        get_settlement_summary,
-        query_bank,
-        get_all_settlement_ids,
-        get_unmatched_bank_credits,
-    )
+from engine.tools.ingestion import get_db
+from engine.tools.query import (
+    get_settlement_summary,
+    query_bank,
+    get_all_settlement_ids,
+    get_unmatched_bank_credits,
+)
 
 
 def add_working_days(date_str: str, days: int) -> str:
@@ -196,8 +176,8 @@ def find_settlement_combinations(
 
 if __name__ == "__main__":
     import uuid
-    from ingestion import get_db, init_schema
-    from ingestion import ingest_payments, ingest_settlements, ingest_bank
+    from engine.tools.ingestion import get_db, init_schema
+    from engine.tools.ingestion import ingest_payments, ingest_settlements, ingest_bank
 
     session_id = str(uuid.uuid4())[:8]
     conn = get_db(session_id)
@@ -209,7 +189,7 @@ if __name__ == "__main__":
     ingest_settlements(session_id, f"{base}/settlements.csv")
     ingest_bank(session_id, f"{base}/bank_statement.csv")
 
-    from query import get_all_settlement_ids
+    from engine.tools.query import get_all_settlement_ids
     ids = get_all_settlement_ids(session_id)
 
     print("=== calc_expected_settlement ===")
@@ -222,7 +202,7 @@ if __name__ == "__main__":
 
     print("=== find_settlement_combinations ===")
     # use first bank credit amount as target
-    from query import get_unmatched_bank_credits
+    from engine.tools.query import get_unmatched_bank_credits
     credits = get_unmatched_bank_credits(session_id)
     target = credits[0]['credit']
     combos = find_settlement_combinations(session_id, target)

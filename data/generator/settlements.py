@@ -204,7 +204,7 @@ def validate_settlements(filepath: str, payments_filepath: str) -> bool:
         return False
 
 if __name__ == "__main__":
-    from payments import generate_payments
+    from data.generator.payments import generate_payments
     payments = generate_payments(n=60)
     
     # Ensure directory exists

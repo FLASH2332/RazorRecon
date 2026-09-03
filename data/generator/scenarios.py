@@ -326,9 +326,9 @@ def validate_scenarios(ground_truth_filepath: str) -> bool:
         return False
 
 if __name__ == "__main__":
-    from payments import generate_payments
-    from settlements import generate_settlements
-    from bank_statement import generate_bank_statement
+    from data.generator.payments import generate_payments
+    from data.generator.settlements import generate_settlements
+    from data.generator.bank_statement import generate_bank_statement
 
     payments = generate_payments(n=60)
     settlements = generate_settlements(payments)

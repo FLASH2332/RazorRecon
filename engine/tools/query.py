@@ -1,9 +1,6 @@
 import duckdb
 import json
-try:
-    from engine.tools.ingestion import get_db
-except ImportError:
-    from ingestion import get_db
+from engine.tools.ingestion import get_db
 
 def _table_exists(conn: duckdb.DuckDBPyConnection, table_name: str) -> bool:
     """Helper to check if a table exists in the DuckDB database."""
@@ -282,14 +279,9 @@ def get_unmatched_bank_credits(session_id: str) -> list[dict]:
         conn.close()
 
 if __name__ == "__main__":
-    import os
-    import sys
-    sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
-    sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-    
     import uuid
-    from ingestion import get_db, init_schema, ingest_payments
-    from ingestion import ingest_settlements, ingest_bank
+    from engine.tools.ingestion import get_db, init_schema, ingest_payments
+    from engine.tools.ingestion import ingest_settlements, ingest_bank
 
     session_id = str(uuid.uuid4())[:8]
     conn = get_db(session_id)

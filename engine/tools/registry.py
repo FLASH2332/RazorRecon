@@ -3,48 +3,22 @@ Session-bound tool wrappers. Exposes all agent tools without
 requiring session_id as a parameter. The LLM never sees session_id.
 """
 
-import os
-import sys
 from typing import Any, Dict, List, Optional
 
-# Ensure project root and engine paths are available in sys.path
-_tools_dir = os.path.dirname(os.path.abspath(__file__))
-_engine_dir = os.path.dirname(_tools_dir)
-_root_dir = os.path.dirname(_engine_dir)
-for p in [_root_dir, _engine_dir, _tools_dir]:
-    if p not in sys.path:
-        sys.path.insert(0, p)
-
-try:
-    from engine.tools.compute import (
-        calc_expected_settlement,
-        find_bank_match,
-        find_settlement_combinations,
-    )
-    from engine.tools.query import (
-        get_settlement_summary,
-        get_unmatched_bank_credits,
-        get_refunds,
-        get_all_settlement_ids,
-        query_bank,
-    )
-    from engine.tools.classify import classify_narration, extract_utr, utrs_match
-    from engine.tools.resolution import mark_confirmed, mark_ambiguous, mark_unresolved
-except ImportError:
-    from compute import (
-        calc_expected_settlement,
-        find_bank_match,
-        find_settlement_combinations,
-    )
-    from query import (
-        get_settlement_summary,
-        get_unmatched_bank_credits,
-        get_refunds,
-        get_all_settlement_ids,
-        query_bank,
-    )
-    from classify import classify_narration, extract_utr, utrs_match
-    from resolution import mark_confirmed, mark_ambiguous, mark_unresolved
+from engine.tools.compute import (
+    calc_expected_settlement,
+    find_bank_match,
+    find_settlement_combinations,
+)
+from engine.tools.query import (
+    get_settlement_summary,
+    get_unmatched_bank_credits,
+    get_refunds,
+    get_all_settlement_ids,
+    query_bank,
+)
+from engine.tools.classify import classify_narration, extract_utr, utrs_match
+from engine.tools.resolution import mark_confirmed, mark_ambiguous, mark_unresolved
 
 # Module-level variable
 _session_id: Optional[str] = None
@@ -406,13 +380,6 @@ TOOL_SCHEMAS = [
 
 if __name__ == "__main__":
     import uuid
-    import sys
-    import os
-
-    # Ensure project root is in sys.path
-    _proj_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    if _proj_root not in sys.path:
-        sys.path.insert(0, _proj_root)
 
     from engine.tools.ingestion import get_db, init_schema
     from engine.tools.ingestion import ingest_payments, ingest_settlements, ingest_bank

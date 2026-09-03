@@ -2,14 +2,11 @@ import sys
 import os
 from datetime import datetime
 
-# Add current directory to sys.path if needed
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-
-from generate import DATASET_CONFIGS, generate_dataset
-from payments import generate_payments, validate_payments
-from settlements import validate_settlements
-from bank_statement import validate_bank_statement
-from scenarios import validate_scenarios
+from data.generator.generate import DATASET_CONFIGS, generate_dataset
+from data.generator.payments import generate_payments, validate_payments
+from data.generator.settlements import validate_settlements
+from data.generator.bank_statement import validate_bank_statement
+from data.generator.scenarios import validate_scenarios
 
 def run_validation() -> bool:
     all_passed = True

@@ -244,8 +244,8 @@ def validate_bank_statement(filepath: str, settlements_filepath: str) -> bool:
         return False
 
 if __name__ == "__main__":
-    from payments import generate_payments
-    from settlements import generate_settlements
+    from data.generator.payments import generate_payments
+    from data.generator.settlements import generate_settlements
 
     payments = generate_payments(n=60)
     settlements = generate_settlements(payments)
