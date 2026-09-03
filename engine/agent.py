@@ -24,6 +24,25 @@ MAX_ITERATIONS = 8
 
 client = Groq(api_key=GROQ_API_KEY or "your_key_here")
 
+
+def call_groq_with_retry(messages, tools, max_retries=5):
+    for attempt in range(max_retries):
+        try:
+            return client.chat.completions.create(
+                model=MODEL,
+                messages=messages,
+                tools=tools,
+                tool_choice="auto"
+            )
+        except Exception as e:
+            if "429" in str(e) and attempt < max_retries - 1:
+                wait = (2 ** attempt) * 10  # 10s, 20s, 40s, 80s, 160s
+                print(f"\n    Rate limited (attempt {attempt+1}), waiting {wait}s...", end=" ", flush=True)
+                time.sleep(wait)
+            else:
+                raise
+
+
 SYSTEM_PROMPT = """
 You are a financial reconciliation investigator for Razorpay settlements.
 
@@ -82,26 +101,7 @@ def run_settlement_investigation(
     verdict_reached = False
 
     for iteration in range(MAX_ITERATIONS):
-        response = None
-        for attempt in range(5):
-            try:
-                response = client.chat.completions.create(
-                    model=MODEL,
-                    messages=messages,
-                    tools=GROQ_TOOL_SCHEMAS,
-                    tool_choice="auto",
-                )
-                break
-            except RateLimitError:
-                time.sleep(8 * (attempt + 1))
-            except Exception as e:
-                if "rate_limit" in str(e).lower() or "429" in str(e):
-                    time.sleep(8 * (attempt + 1))
-                else:
-                    raise e
-
-        if response is None:
-            break
+        response = call_groq_with_retry(messages, GROQ_TOOL_SCHEMAS)
 
         message = response.choices[0].message
 
