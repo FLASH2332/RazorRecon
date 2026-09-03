@@ -2,10 +2,10 @@ import os
 import csv
 import json
 import sys
-from payments import generate_payments
-from settlements import generate_settlements
-from bank_statement import generate_bank_statement
-from scenarios import inject_scenarios
+from data.generator.payments import generate_payments
+from data.generator.settlements import generate_settlements
+from data.generator.bank_statement import generate_bank_statement
+from data.generator.scenarios import inject_scenarios
 
 DATASET_CONFIGS = {
     "small": {"n": 60,  "seed": 42, "date_window_days": 30},
