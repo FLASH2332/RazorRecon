@@ -18,6 +18,7 @@ from engine.tools.query import (
     query_bank,
 )
 from engine.tools.classify import classify_narration, extract_utr, utrs_match
+from engine.verification import verify_match, verify_combination
 from engine.tools.resolution import mark_confirmed, mark_ambiguous, mark_unresolved
 
 # Module-level variable
@@ -94,57 +95,79 @@ def tool_classify_narration(narration: str) -> str:
     return classify_narration(narration)
 
 
-def tool_mark_confirmed(
+def tool_submit_verdict(
     record_id: str,
+    proposed_verdict: str,
     evidence: dict,
-    strategies_tried: list,
-    reasoning: str,
-) -> dict:
-    """Mark a settlement as confirmed with evidence. Writes to reconciliation log."""
-    _check_session()
-    return mark_confirmed(
-        session_id=_session_id,
-        record_id=record_id,
-        evidence=evidence,
-        strategies_tried=strategies_tried,
-        tool_calls=[],
-        reasoning=reasoning,
-    )
-
-
-def tool_mark_ambiguous(
-    record_id: str,
     competing: list,
     strategies_tried: list,
     reasoning: str,
 ) -> dict:
-    """Mark a settlement as ambiguous — multiple valid explanations exist.
-    System abstains rather than guessing."""
+    """
+    Submit your investigation verdict for verification.
+    proposed_verdict must be one of: confirmed, ambiguous, unresolved.
+    evidence must include: expected_amount, actual_amount, tolerance, match_count, bank_txn_id.
+    competing is a list of competing explanations (empty if none).
+    The system will validate your evidence before recording the verdict.
+    You cannot bypass this verification step.
+    """
     _check_session()
-    return mark_ambiguous(
-        session_id=_session_id,
-        record_id=record_id,
-        competing=competing,
-        strategies_tried=strategies_tried,
-        tool_calls=[],
-        reasoning=reasoning,
-    )
+    if proposed_verdict == "confirmed":
+        verification = verify_match(
+            expected_amount=float(evidence.get("expected_amount", 0)),
+            actual_amount=float(evidence.get("actual_amount", 0)),
+            tolerance=float(evidence.get("tolerance", 10)),
+            match_count=int(evidence.get("match_count", 0)),
+            competing_count=len(competing),
+        )
+        final_verdict = verification["verdict"]
+        reason = verification["reason"]
 
+        if final_verdict == "confirmed":
+            return mark_confirmed(
+                session_id=_session_id,
+                record_id=record_id,
+                evidence=evidence,
+                strategies_tried=strategies_tried,
+                tool_calls=[],
+                reasoning=f"{reasoning} | Verification: {reason}",
+            )
+        elif final_verdict == "ambiguous":
+            return mark_ambiguous(
+                session_id=_session_id,
+                record_id=record_id,
+                competing=competing or [{"reason": reason}],
+                strategies_tried=strategies_tried,
+                tool_calls=[],
+                reasoning=f"LLM proposed confirmed but verification overrode to ambiguous: {reason}",
+            )
+        else:
+            return mark_unresolved(
+                session_id=_session_id,
+                record_id=record_id,
+                strategies_tried=strategies_tried,
+                tool_calls=[],
+                reasoning=f"LLM proposed confirmed but verification overrode to unresolved: {reason}",
+            )
 
-def tool_mark_unresolved(
-    record_id: str,
-    strategies_tried: list,
-    reasoning: str,
-) -> dict:
-    """Mark a settlement as unresolved — all strategies exhausted, no match found."""
-    _check_session()
-    return mark_unresolved(
-        session_id=_session_id,
-        record_id=record_id,
-        strategies_tried=strategies_tried,
-        tool_calls=[],
-        reasoning=reasoning,
-    )
+    elif proposed_verdict == "ambiguous":
+        return mark_ambiguous(
+            session_id=_session_id,
+            record_id=record_id,
+            competing=competing,
+            strategies_tried=strategies_tried,
+            tool_calls=[],
+            reasoning=reasoning,
+        )
+
+    else:  # unresolved
+        return mark_unresolved(
+            session_id=_session_id,
+            record_id=record_id,
+            strategies_tried=strategies_tried,
+            tool_calls=[],
+            reasoning=reasoning,
+        )
 
 
 TOOL_REGISTRY = {
@@ -155,13 +178,11 @@ TOOL_REGISTRY = {
     "get_unmatched_bank_credits": tool_get_unmatched_bank_credits,
     "calc_expected_settlement": tool_calc_expected_settlement,
     "classify_narration": tool_classify_narration,
-    "mark_confirmed": tool_mark_confirmed,
-    "mark_ambiguous": tool_mark_ambiguous,
-    "mark_unresolved": tool_mark_unresolved,
+    "submit_verdict": tool_submit_verdict,
 }
 
 
-TOOL_SCHEMAS = [
+GROQ_TOOL_SCHEMAS = [
     {
         "type": "function",
         "function": {
@@ -291,49 +312,46 @@ TOOL_SCHEMAS = [
     {
         "type": "function",
         "function": {
-            "name": "mark_confirmed",
-            "description": "Mark a settlement as confirmed with evidence. Writes to reconciliation log.",
+            "name": "submit_verdict",
+            "description": (
+                "Submit your investigation verdict for verification. "
+                "proposed_verdict must be one of: confirmed, ambiguous, unresolved. "
+                "evidence must include: expected_amount, actual_amount, tolerance, match_count, bank_txn_id. "
+                "competing is a list of competing explanations (empty if none). "
+                "The system will validate your evidence before recording the verdict. "
+                "You cannot bypass this verification step."
+            ),
             "parameters": {
                 "type": "object",
                 "properties": {
                     "record_id": {
                         "type": "string",
-                        "description": "The settlement_id or bank txn_id being reconciled.",
+                        "description": "The settlement_id or bank transaction id under review.",
+                    },
+                    "proposed_verdict": {
+                        "type": "string",
+                        "enum": ["confirmed", "ambiguous", "unresolved"],
+                        "description": "Proposed verdict for the record: confirmed, ambiguous, or unresolved.",
                     },
                     "evidence": {
                         "type": "object",
-                        "description": "Dictionary of matched records, amounts, and verification proof.",
-                    },
-                    "strategies_tried": {
-                        "type": "array",
-                        "items": {"type": "string"},
-                        "description": "List of strategy identifiers attempted.",
-                    },
-                    "reasoning": {
-                        "type": "string",
-                        "description": "Detailed explanation justifying why this match is confirmed.",
-                    },
-                },
-                "required": ["record_id", "evidence", "strategies_tried", "reasoning"],
-            },
-        },
-    },
-    {
-        "type": "function",
-        "function": {
-            "name": "mark_ambiguous",
-            "description": "Mark a settlement as ambiguous — multiple valid explanations exist. System abstains rather than guessing.",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "record_id": {
-                        "type": "string",
-                        "description": "The settlement_id or bank txn_id under review.",
+                        "description": "Evidence dictionary validating the proposed match.",
+                        "properties": {
+                            "expected_amount": {"type": "number"},
+                            "actual_amount": {"type": "number"},
+                            "tolerance": {"type": "number"},
+                            "match_count": {"type": "integer"},
+                            "bank_txn_id": {"type": "string"},
+                            "bank_txn_ids": {
+                                "type": "array",
+                                "items": {"type": "string"},
+                            },
+                        },
                     },
                     "competing": {
                         "type": "array",
                         "items": {"type": "object"},
-                        "description": "List of competing valid explanation objects.",
+                        "description": "Competing explanations (empty array if none).",
                     },
                     "strategies_tried": {
                         "type": "array",
@@ -342,40 +360,24 @@ TOOL_SCHEMAS = [
                     },
                     "reasoning": {
                         "type": "string",
-                        "description": "Explanation of why ambiguity could not be resolved.",
+                        "description": "Detailed reasoning explaining the findings.",
                     },
                 },
-                "required": ["record_id", "competing", "strategies_tried", "reasoning"],
-            },
-        },
-    },
-    {
-        "type": "function",
-        "function": {
-            "name": "mark_unresolved",
-            "description": "Mark a settlement as unresolved — all strategies exhausted, no match found.",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "record_id": {
-                        "type": "string",
-                        "description": "The settlement_id or bank txn_id that could not be reconciled.",
-                    },
-                    "strategies_tried": {
-                        "type": "array",
-                        "items": {"type": "string"},
-                        "description": "List of strategy identifiers attempted.",
-                    },
-                    "reasoning": {
-                        "type": "string",
-                        "description": "Explanation of the failure to find matching records.",
-                    },
-                },
-                "required": ["record_id", "strategies_tried", "reasoning"],
+                "required": [
+                    "record_id",
+                    "proposed_verdict",
+                    "evidence",
+                    "competing",
+                    "strategies_tried",
+                    "reasoning",
+                ],
             },
         },
     },
 ]
+
+# Alias for backward compatibility
+TOOL_SCHEMAS = GROQ_TOOL_SCHEMAS
 
 
 if __name__ == "__main__":
@@ -409,9 +411,29 @@ if __name__ == "__main__":
     credits = tool_get_unmatched_bank_credits()
     print(f"Credits count: {len(credits)}")
 
-    print("=== TOOL_SCHEMAS count ===")
-    print(f"Schemas defined: {len(TOOL_SCHEMAS)}")
-    for s in TOOL_SCHEMAS:
+    print("=== tool_submit_verdict (confirmed) ===")
+    match = tool_find_bank_match(ids[0])
+    expected = tool_calc_expected_settlement(ids[0])
+    result = tool_submit_verdict(
+        record_id=ids[0],
+        proposed_verdict="confirmed",
+        evidence={
+            "expected_amount": expected["expected_bank_credit"],
+            "actual_amount": match["matches"][0]["credit"] if match["match_count"] > 0 else 0,
+            "tolerance": expected["tolerance"],
+            "match_count": match["match_count"],
+            "bank_txn_id": match["matches"][0]["txn_id"] if match["match_count"] > 0 else None,
+        },
+        competing=[],
+        strategies_tried=["amount_date_match"],
+        reasoning="Single bank credit found matching expected amount within tolerance",
+    )
+    print(result)
+    print(f"Final verdict: {result.get('verdict')}")
+
+    print("=== GROQ_TOOL_SCHEMAS count ===")
+    print(f"Schemas defined: {len(GROQ_TOOL_SCHEMAS)}")
+    for s in GROQ_TOOL_SCHEMAS:
         print(f"  {s['function']['name']}")
 
     try:
