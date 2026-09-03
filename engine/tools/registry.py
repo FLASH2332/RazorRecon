@@ -170,6 +170,22 @@ def tool_submit_verdict(
         )
 
 
+def tool_mark_unresolved(
+    record_id: str,
+    strategies_tried: list,
+    reasoning: str,
+) -> dict:
+    """Mark a settlement as unresolved — all strategies exhausted, no match found."""
+    _check_session()
+    return mark_unresolved(
+        session_id=_session_id,
+        record_id=record_id,
+        strategies_tried=strategies_tried,
+        tool_calls=[],
+        reasoning=reasoning,
+    )
+
+
 TOOL_REGISTRY = {
     "get_settlement_summary": tool_get_settlement_summary,
     "find_bank_match": tool_find_bank_match,
