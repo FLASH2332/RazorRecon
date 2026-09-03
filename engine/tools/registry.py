@@ -360,18 +360,34 @@ GROQ_TOOL_SCHEMAS = [
                     },
                     "evidence": {
                         "type": "object",
-                        "description": "Evidence dictionary validating the proposed match.",
                         "properties": {
-                            "expected_amount": {"type": "number"},
-                            "actual_amount": {"type": "number"},
-                            "tolerance": {"type": "number"},
-                            "match_count": {"type": "integer"},
-                            "bank_txn_id": {"type": "string"},
+                            "expected_amount": {
+                                "anyOf": [{"type": "number"}, {"type": "null"}],
+                                "description": "Expected bank credit amount",
+                            },
+                            "actual_amount": {
+                                "anyOf": [{"type": "number"}, {"type": "null"}],
+                                "description": "Actual bank credit amount found",
+                            },
+                            "tolerance": {
+                                "anyOf": [{"type": "number"}, {"type": "null"}],
+                                "description": "Matching tolerance amount",
+                            },
+                            "match_count": {
+                                "anyOf": [{"type": "integer"}, {"type": "null"}],
+                                "description": "Number of matches found",
+                            },
+                            "bank_txn_id": {
+                                "anyOf": [{"type": "string"}, {"type": "null"}],
+                                "description": "Matched bank transaction ID",
+                            },
                             "bank_txn_ids": {
                                 "type": "array",
                                 "items": {"type": "string"},
+                                "description": "Multiple matched bank transaction IDs",
                             },
                         },
+                        "required": [],
                     },
                     "competing": {
                         "type": "array",
