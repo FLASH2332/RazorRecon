@@ -264,46 +264,8 @@ def save_report(report: dict, filepath: str) -> None:
 
 
 if __name__ == "__main__":
-    import uuid
-    from engine.tools.ingestion import get_db, init_schema
-    from engine.tools.ingestion import ingest_payments, ingest_settlements, ingest_bank
-    from engine.tools.resolution import mark_confirmed, mark_ambiguous, mark_unresolved
-
-    session_id = str(uuid.uuid4())[:8]
-    conn = get_db(session_id)
-    init_schema(conn)
-    conn.close()
-
-    base = "data/sample/small"
-    ingest_payments(session_id, f"{base}/payments.csv")
-    ingest_settlements(session_id, f"{base}/settlements.csv")
-    ingest_bank(session_id, f"{base}/bank_statement.csv")
-
-    # Inject some fake decisions to test report
-    mark_confirmed(
-        session_id=session_id,
-        record_id="SETL_001",
-        evidence={"bank_txn_id": "TXN_001", "expected_amount": 11558.51, "actual_amount": 11558.51, "match_count": 1},
-        strategies_tried=["amount_date_match"],
-        tool_calls=[],
-        reasoning="Single bank credit matched within tolerance",
-    )
-    mark_ambiguous(
-        session_id=session_id,
-        record_id="TXN_COMBINED",
-        competing=[{"settlements": ["SETL_010", "SETL_011"]}, {"settlements": ["SETL_012"]}],
-        strategies_tried=["amount_date_match", "combination_match"],
-        tool_calls=[],
-        reasoning="Two valid combinations found, cannot determine correct match",
-    )
-    mark_unresolved(
-        session_id=session_id,
-        record_id="TXN_ORPHAN",
-        strategies_tried=["orphan_check"],
-        tool_calls=[],
-        reasoning="Bank credit with no corresponding settlement found",
-    )
-
+    import sys
+    session_id = sys.argv[1] if len(sys.argv) > 1 else "1a1742ac"
     report = generate_report(session_id)
     print_report(report)
     save_report(report, f"sessions/{session_id}_report.json")
