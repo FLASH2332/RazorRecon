@@ -3,6 +3,7 @@ Session-bound tool wrappers. Exposes all agent tools without
 requiring session_id as a parameter. The LLM never sees session_id.
 """
 
+import json
 from typing import Any, Dict, List, Optional
 
 from engine.tools.compute import (
@@ -112,6 +113,21 @@ def tool_submit_verdict(
     You cannot bypass this verification step.
     """
     _check_session()
+
+    # Handle evidence passed as string instead of object
+    if isinstance(evidence, str):
+        try:
+            evidence = json.loads(evidence)
+        except (json.JSONDecodeError, ValueError):
+            evidence = {}
+
+    # Handle competing passed as string
+    if isinstance(competing, str):
+        try:
+            competing = json.loads(competing)
+        except (json.JSONDecodeError, ValueError):
+            competing = []
+
     if proposed_verdict == "confirmed":
         verification = verify_match(
             expected_amount=float(evidence.get("expected_amount", 0)),

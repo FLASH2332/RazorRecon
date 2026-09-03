@@ -35,9 +35,14 @@ def call_groq_with_retry(messages, tools, max_retries=5):
                 tool_choice="auto"
             )
         except Exception as e:
-            if "429" in str(e) and attempt < max_retries - 1:
-                wait = (2 ** attempt) * 10  # 10s, 20s, 40s, 80s, 160s
-                print(f"\n    Rate limited (attempt {attempt+1}), waiting {wait}s...", end=" ", flush=True)
+            err_str = str(e)
+            if "429" in err_str and attempt < max_retries - 1:
+                wait = (2 ** attempt) * 10
+                print(f"\n    Rate limited, waiting {wait}s...", end=" ", flush=True)
+                time.sleep(wait)
+            elif "400" in err_str and "parse" in err_str.lower() and attempt < max_retries - 1:
+                wait = 3 * (attempt + 1)
+                print(f"\n    Parse error, retrying in {wait}s...", end=" ", flush=True)
                 time.sleep(wait)
             else:
                 raise
