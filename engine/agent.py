@@ -1,6 +1,7 @@
 from datetime import datetime
 import json
 import os
+import re
 import time
 from dotenv import load_dotenv
 import litellm
@@ -33,14 +34,27 @@ def call_llm_with_retry(messages, tools, max_retries=5):
                 model=MODEL,
                 messages=messages,
                 tools=tools,
-                tool_choice="auto"
+                tool_choice="auto",
+                max_tokens=1024
             )
         except Exception as e:
+            print(f"LiteLLM error (attempt {attempt+1}): {type(e).__name__}: {str(e)[:300]}")
             err_str = str(e)
-            if "429" in err_str and attempt < max_retries - 1:
-                wait = (2 ** attempt) * 10
-                print(f"\n    Rate limited, waiting {wait}s...", end=" ", flush=True)
+            if ("429" in err_str or "RateLimitError" in err_str) and attempt < max_retries - 1:
+                # Parse exact wait time from Groq error message
+                match = re.search(r'try again in (?:(\d+)m)?(\d+\.?\d*)s', err_str)
+                if not match:
+                    match = re.search(r'try again in (\d+)m?(\d+\.?\d*)s', err_str)
+                if match:
+                    minutes = int(match.group(1)) if match.group(1) else 0
+                    seconds = float(match.group(2))
+                    wait = minutes * 60 + seconds + 5  # add 5s buffer
+                else:
+                    wait = (2 ** attempt) * 15
+
+                print(f"\n    Rate limited, waiting {wait:.0f}s...", end=" ", flush=True)
                 time.sleep(wait)
+                continue
             elif "400" in err_str and "parse" in err_str.lower() and attempt < max_retries - 1:
                 wait = 3 * (attempt + 1)
                 print(f"\n    Parse error, retrying in {wait}s...", end=" ", flush=True)
@@ -288,7 +302,7 @@ def run_reconciliation(session_id: str) -> dict:
               conn.execute("SELECT started_at FROM reconciliation_progress WHERE session_id=?",
               [session_id]).fetchone()[0], datetime.utcnow()])
         conn.close()
-        time.sleep(3)
+        time.sleep(60)
 
     # Step 4: Flag orphan bank credits
     all_decisions = get_decisions(session_id)

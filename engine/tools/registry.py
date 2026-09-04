@@ -100,9 +100,9 @@ def tool_submit_verdict(
     record_id: str,
     proposed_verdict: str,
     evidence: dict,
-    competing: list,
     strategies_tried: list,
     reasoning: str,
+    competing: list = None,
 ) -> dict:
     """
     Submit your investigation verdict for verification.
@@ -113,6 +113,9 @@ def tool_submit_verdict(
     You cannot bypass this verification step.
     """
     _check_session()
+
+    if competing is None:
+        competing = []
 
     # Handle evidence passed as string instead of object
     if isinstance(evidence, str):
@@ -382,9 +385,11 @@ GROQ_TOOL_SCHEMAS = [
                                 "description": "Matched bank transaction ID",
                             },
                             "bank_txn_ids": {
-                                "type": "array",
-                                "items": {"type": "string"},
-                                "description": "Multiple matched bank transaction IDs",
+                                "anyOf": [
+                                    {"type": "array", "items": {"type": "string"}},
+                                    {"type": "null"}
+                                ],
+                                "description": "Multiple matched bank transaction IDs or null",
                             },
                         },
                         "required": [],
@@ -392,7 +397,8 @@ GROQ_TOOL_SCHEMAS = [
                     "competing": {
                         "type": "array",
                         "items": {"type": "object"},
-                        "description": "List of competing explanations if any.",
+                        "description": "Competing explanations. Pass empty array [] if none.",
+                        "default": [],
                     },
                     "strategies_tried": {
                         "type": "array",
@@ -408,7 +414,6 @@ GROQ_TOOL_SCHEMAS = [
                     "record_id",
                     "proposed_verdict",
                     "evidence",
-                    "competing",
                     "strategies_tried",
                     "reasoning",
                 ],
