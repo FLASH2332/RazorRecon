@@ -204,10 +204,11 @@ def run_settlement_investigation(
         response = call_llm_with_retry(messages, GROQ_TOOL_SCHEMAS)
         message = response.choices[0].message
 
-        if not message.tool_calls:
+        tool_calls = getattr(message, 'tool_calls', None)
+        if not tool_calls:
             break
 
-        for tool_call in message.tool_calls:
+        for tool_call in tool_calls:
             tool_name = tool_call.function.name
             try:
                 tool_args = json.loads(tool_call.function.arguments)
