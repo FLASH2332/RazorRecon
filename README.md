@@ -66,7 +66,7 @@ The matching problem presents five compounding difficulties:
 
 ## System Architecture
 
-![RazorRecon Architecture](assets/architecture.png)
+![RazorRecon Architecture](assets/Architecture.png)
 
 ---
 
@@ -316,3 +316,61 @@ To maintain clarity on project boundaries:
 ![Unresolved cases](assets/Image-5.png)   
 
 ![Reasoning](assets/Image-6.png)
+
+## Repository Structure
+
+```
+razorrecon/
+├── data/
+│   └── generator/
+│       ├── generate.py          # main entry point, all dataset sizes (tiny/small/medium/large)
+│       ├── payments.py          # payment + refund row generation
+│       ├── settlements.py       # settlement generation with fee math (MDR, GST, TDS)
+│       ├── bank_statement.py    # bank credit generation + narration formatting + settlement_bank_map
+│       ├── scenarios.py         # scenario injection (partial refund, malformed UTR, batching, orphan)
+│       └── validate_config.py   # validation checks for dataset generator configs
+│
+├── engine/
+│   ├── agent.py                 # ReAct loop, in-memory state context rebuild, LiteLLM retry
+│   ├── verification.py          # verification layer — deterministic verdict rules
+│   ├── report.py                # report compilation, metrics calculation
+│   ├── llm_client.py            # LiteLLM client wrapper for simple completions
+│   ├── pdf_parser.py            # pdfplumber table extraction pipeline (scaffolded)
+│   └── tools/
+│       ├── registry.py          # tool wrappers, schemas, submit_verdict + verification gate
+│       ├── compute.py           # calc_expected_settlement, combination finder (subset-sum)
+│       ├── query.py             # query_settlements, query_bank_txns, candidate search
+│       ├── classify.py          # classify_narration, extract_utr regex parser
+│       ├── resolution.py        # mark_confirmed, mark_ambiguous, mark_unresolved, verdict log
+│       └── ingestion.py         # DuckDB session init, schema setup, CSV ingestion
+│
+├── api/
+│   ├── main.py                  # FastAPI app, CORS middleware, route registration
+│   ├── routers/
+│   │   ├── sessions.py          # session creation (POST /sessions), state inspection
+│   │   ├── upload.py            # CSV file uploads (payments, settlements, bank statement)
+│   │   ├── reconcile.py         # trigger agent investigation loop (POST /sessions/{id} reconcile)
+│   │   ├── report.py            # fetch reconciliation report & verdict summary
+│   │   └── qa.py                # natural language settlement Q&A (scaffolded)
+│   └── session/
+│       └── manager.py           # session lifecycle, DuckDB database file management
+│
+├── frontend/
+│   ├── index.html               # single-page dark dashboard layout
+│   ├── dashboard.js             # upload flow, live progress polling, report table, session 
+│   └── style.css                # dashboard theme and custom styling
+│
+├── tests/
+│   ├── test_reconciler.py       # unit tests for reconciliation logic
+│   ├── test_verification.py     # verification layer rules & tolerance asserts
+│   ├── test_context_extraction.py # in-memory state & tool key result compression tests
+│   ├── test_pdf_parser.py       # parser test harness on sample PDFs
+│   └── eval/
+│       ├── run_eval.py          # evaluation harness against ground truth & safety metrics
+│       └── held_out/            # held-out evaluation dataset directory
+│
+├── pyproject.toml               # project metadata and dependencies
+├── AGENTS.md                    # technical architecture reference for judges & contributors
+├── .env.example                 # sample environment variables (LiteLLM provider configs)
+└── README.md
+```
