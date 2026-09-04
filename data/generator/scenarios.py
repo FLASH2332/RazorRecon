@@ -8,8 +8,9 @@ def inject_scenarios(
     payments: list[dict],
     settlements: list[dict],
     bank_statement: list[dict],
+    settlement_bank_map: dict = None,
     seed: int = 42
-) -> tuple[list[dict], list[dict], list[dict], dict]:
+) -> tuple[list, list, list, dict, dict]:
     """
     Inject realistic messiness into clean generated data to create reconciliation edge cases.
     
@@ -17,11 +18,12 @@ def inject_scenarios(
         payments (list[dict]): Clean payments list.
         settlements (list[dict]): Clean settlements list.
         bank_statement (list[dict]): Clean bank statement list.
+        settlement_bank_map (dict, optional): Map of settlement_id -> txn_id.
         seed (int): Random seed for reproducibility.
         
     Returns:
-        tuple[list[dict], list[dict], list[dict], dict]:
-            (modified payments, modified settlements, modified bank_statement, ground_truth)
+        tuple[list, list, list, dict, dict]:
+            (modified payments, modified settlements, modified bank_statement, ground_truth, updated_map)
     """
     random.seed(seed)
 
@@ -29,6 +31,7 @@ def inject_scenarios(
     payments_mod = [dict(p) for p in payments]
     settlements_mod = [dict(s) for s in settlements]
     bank_mod = [dict(b) for b in bank_statement]
+    updated_map = dict(settlement_bank_map) if settlement_bank_map is not None else {}
     ground_truth = {"scenarios": []}
 
     # =========================================================================
@@ -233,6 +236,10 @@ def inject_scenarios(
             "expected_verdict": "confirmed"
         })
 
+        # Update settlement_bank_map: batched settlements both point to TXN_COMBINED
+        updated_map[sid1] = "TXN_COMBINED"
+        updated_map[sid2] = "TXN_COMBINED"
+
     # Recalculate balances after scenario 3
     recalculate_bank_balances(bank_mod)
 
@@ -269,10 +276,15 @@ def inject_scenarios(
         "expected_verdict": "unresolved"
     })
 
+    # Update settlement_bank_map: add TXN_ORPHAN
+    updated_map["TXN_ORPHAN"] = None
+
     # Final recalculation of balances
     recalculate_bank_balances(bank_mod)
 
-    return payments_mod, settlements_mod, bank_mod, ground_truth
+    ground_truth["settlement_bank_map"] = updated_map
+
+    return payments_mod, settlements_mod, bank_mod, ground_truth, updated_map
 
 def validate_scenarios(ground_truth_filepath: str) -> bool:
     """
@@ -332,9 +344,11 @@ if __name__ == "__main__":
 
     payments = generate_payments(n=60)
     settlements = generate_settlements(payments)
-    bank = generate_bank_statement(settlements)
+    bank, settlement_bank_map = generate_bank_statement(settlements)
 
-    p_messy, s_messy, b_messy, gt = inject_scenarios(payments, settlements, bank)
+    p_messy, s_messy, b_messy, gt, updated_map = inject_scenarios(
+        payments, settlements, bank, settlement_bank_map
+    )
 
     output_dir = os.path.join("data", "sample")
     os.makedirs(output_dir, exist_ok=True)

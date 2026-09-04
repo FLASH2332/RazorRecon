@@ -39,7 +39,7 @@ def generate_dataset(size: str, inject: bool = True) -> dict:
     # 1. Generate clean datasets
     payments = generate_payments(n=n, seed=seed, date_window_days=date_window_days)
     settlements = generate_settlements(payments, seed=seed)
-    bank = generate_bank_statement(settlements, seed=seed)
+    bank, settlement_bank_map = generate_bank_statement(settlements, seed=seed)
 
     # Write clean CSVs
     p_keys = ["order_id", "amount", "type", "parent_order_id", "date", "status", "method"]
@@ -68,7 +68,9 @@ def generate_dataset(size: str, inject: bool = True) -> dict:
 
     # 2. Inject scenarios if requested
     if inject:
-        p_messy, s_messy, b_messy, gt = inject_scenarios(payments, settlements, bank, seed=seed)
+        p_messy, s_messy, b_messy, gt, updated_map = inject_scenarios(
+            payments, settlements, bank, settlement_bank_map, seed=seed
+        )
         scenarios_injected_count = len(gt.get("scenarios", []))
 
         with open(os.path.join(output_dir, "payments_messy.csv"), mode="w", newline="", encoding="utf-8") as f:
