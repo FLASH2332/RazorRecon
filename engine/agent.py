@@ -108,6 +108,9 @@ def run_settlement_investigation(
     verdict_reached = False
 
     for iteration in range(MAX_ITERATIONS):
+        if len(messages) > 10:
+            messages = messages[:2] + messages[-6:]
+
         response = call_groq_with_retry(messages, GROQ_TOOL_SCHEMAS)
 
         message = response.choices[0].message

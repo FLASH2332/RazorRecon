@@ -189,9 +189,12 @@ async function pollStatus() {
       document.getElementById("current-settlement-text").textContent = "Finalizing report...";
     }
 
-    if (data.status === "completed") {
+    if (data.status === "completed" || data.status === "partial") {
       clearInterval(pollInterval);
       await fetchReportAndShowResults();
+      if (data.status === "partial") {
+        showError("Reconciliation stopped with partial results due to an error.");
+      }
     } else if (data.status === "failed") {
       clearInterval(pollInterval);
       showError("Reconciliation process encountered an error and halted.");

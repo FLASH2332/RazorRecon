@@ -8,6 +8,7 @@ from data.generator.bank_statement import generate_bank_statement
 from data.generator.scenarios import inject_scenarios
 
 DATASET_CONFIGS = {
+    "tiny": {"n": 15, "seed": 99, "date_window_days": 10},
     "small": {"n": 60,  "seed": 42, "date_window_days": 30},
     "medium": {"n": 200, "seed": 43, "date_window_days": 60},
     "large": {"n": 500, "seed": 44, "date_window_days": 90}

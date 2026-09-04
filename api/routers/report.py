@@ -16,7 +16,7 @@ def _ensure_reconciliation_completed(session_id: str):
     finally:
         conn.close()
 
-    if not row or row[0] != "completed":
+    if not row or row[0] not in ("completed", "partial"):
         raise HTTPException(
             status_code=425,
             detail="Reconciliation not complete yet. Check /status first."

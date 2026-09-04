@@ -225,3 +225,4 @@ sessions/
 data/sample/
 data/held_out/
 !data/generator/
+fix_session.py

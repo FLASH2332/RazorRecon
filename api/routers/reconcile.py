@@ -4,12 +4,19 @@ from datetime import datetime
 from engine.agent import run_reconciliation
 from engine.tools.ingestion import get_db, init_schema
 
+from engine.report import generate_report, save_report
+
 router = APIRouter()
 
 
 def _run_reconciliation_worker(session_id: str):
     try:
         run_reconciliation(session_id)
+        try:
+            report = generate_report(session_id)
+            save_report(report, f"sessions/{session_id}_report.json")
+        except Exception:
+            pass
     except Exception as e:
         try:
             conn = get_db(session_id)
@@ -21,11 +28,28 @@ def _run_reconciliation_worker(session_id: str):
             started_at = row[0] if row and row[0] else datetime.utcnow()
             processed = row[1] if row and row[1] is not None else 0
             total = row[2] if row and row[2] is not None else 0
+
+            # Check if any decisions were logged
+            dec_row = conn.execute(
+                "SELECT count(*) FROM reconciliation_log WHERE session_id = ?",
+                [session_id]
+            ).fetchone()
+            has_decisions = bool(dec_row and dec_row[0] > 0)
+
+            status = "partial" if has_decisions else "failed"
+
             conn.execute("""
                 INSERT OR REPLACE INTO reconciliation_progress
                 VALUES (?, ?, ?, ?, ?, ?, ?)
-            """, [session_id, processed, total, str(e)[:100], 'failed', started_at, datetime.utcnow()])
+            """, [session_id, processed, total, str(e)[:100], status, started_at, datetime.utcnow()])
             conn.close()
+
+            # Attempt to save partial report
+            try:
+                report = generate_report(session_id)
+                save_report(report, f"sessions/{session_id}_report.json")
+            except Exception:
+                pass
         except Exception:
             pass
 
