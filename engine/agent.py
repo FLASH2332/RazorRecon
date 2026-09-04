@@ -3,8 +3,10 @@ import json
 import os
 import time
 from dotenv import load_dotenv
-from groq import Groq, RateLimitError
+import litellm
 import sys
+
+litellm.drop_params = True
 
 from engine.tools.ingestion import check_ingestion_state, get_db
 from engine.tools.query import get_all_settlement_ids
@@ -21,16 +23,13 @@ from engine.tools.registry import (
 load_dotenv()
 
 MODEL = os.getenv("LLM_MODEL", "openai/gpt-oss-20b")
-GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 MAX_ITERATIONS = 8
 
-client = Groq(api_key=GROQ_API_KEY or "your_key_here")
 
-
-def call_groq_with_retry(messages, tools, max_retries=5):
+def call_llm_with_retry(messages, tools, max_retries=5):
     for attempt in range(max_retries):
         try:
-            return client.chat.completions.create(
+            return litellm.completion(
                 model=MODEL,
                 messages=messages,
                 tools=tools,
@@ -202,7 +201,7 @@ def run_settlement_investigation(
             {"role": "user", "content": user_content}
         ]
 
-        response = call_groq_with_retry(messages, GROQ_TOOL_SCHEMAS)
+        response = call_llm_with_retry(messages, GROQ_TOOL_SCHEMAS)
         message = response.choices[0].message
 
         if not message.tool_calls:
