@@ -90,6 +90,96 @@ Critical rules:
 """
 
 
+def extract_key_result(tool_name: str, result: dict) -> dict:
+    if tool_name == "calc_expected_settlement":
+        if isinstance(result, dict):
+            return {
+                "expected_bank_credit": result.get("expected_bank_credit"),
+                "tolerance": result.get("tolerance"),
+            }
+        return {"expected_bank_credit": None, "tolerance": None}
+    elif tool_name == "find_bank_match":
+        if isinstance(result, dict):
+            return {
+                "match_count": result.get("match_count"),
+                "expected_amount": result.get("expected_amount"),
+                "tolerance": result.get("tolerance"),
+            }
+        return {"match_count": None, "expected_amount": None, "tolerance": None}
+    elif tool_name == "find_settlement_combinations":
+        if isinstance(result, dict):
+            return {
+                "combination_count": result.get("combination_count"),
+                "valid_combinations": result.get("valid_combinations"),
+            }
+        return {"combination_count": None, "valid_combinations": None}
+    elif tool_name == "get_refunds":
+        if isinstance(result, list):
+            return {"refund_count": len(result)}
+        elif isinstance(result, dict) and "refund_count" in result:
+            return {"refund_count": result["refund_count"]}
+        elif isinstance(result, dict) and "refunds" in result and isinstance(result["refunds"], list):
+            return {"refund_count": len(result["refunds"])}
+        return {"refund_count": 0}
+    elif tool_name == "get_settlement_summary":
+        if isinstance(result, dict):
+            return {
+                "total_gross": result.get("total_gross"),
+                "total_net": result.get("total_net"),
+                "total_refunds": result.get("total_refunds"),
+                "payment_count": result.get("payment_count"),
+            }
+        return {
+            "total_gross": None,
+            "total_net": None,
+            "total_refunds": None,
+            "payment_count": None,
+        }
+    elif tool_name == "submit_verdict":
+        if isinstance(result, dict):
+            return {
+                "verdict": result.get("verdict"),
+                "record_id": result.get("record_id"),
+            }
+        return {"verdict": None, "record_id": None}
+    else:
+        return result
+
+
+def build_state_summary(state: dict) -> str:
+    tools_called = state.get("tools_called") if isinstance(state, dict) else None
+    if not tools_called:
+        return "No steps completed yet. Begin investigation."
+
+    lines = ["Steps completed so far:"]
+
+    if isinstance(tools_called, dict):
+        items = tools_called.items()
+    elif isinstance(tools_called, (list, tuple)):
+        items = []
+        for item in tools_called:
+            if isinstance(item, (list, tuple)) and len(item) >= 2:
+                items.append((item[0], item[1]))
+            elif isinstance(item, dict):
+                tool = item.get("tool") or item.get("name") or "unknown"
+                key_res = item.get("key_result") if "key_result" in item else item.get("result", item)
+                items.append((tool, key_res))
+            else:
+                items.append((str(item), ""))
+    else:
+        items = [(str(tools_called), "")]
+
+    for tool, key_result in items:
+        if key_result != "":
+            lines.append(f" - {tool}: {key_result}")
+        else:
+            lines.append(f" - {tool}")
+
+    verdict = (state.get("verdict") if isinstance(state, dict) else None) or "not yet submitted"
+    lines.append(f"Verdict: {verdict}")
+    return "\n".join(lines)
+
+
 def run_settlement_investigation(
     session_id: str,
     settlement_id: str,
