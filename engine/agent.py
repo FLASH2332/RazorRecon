@@ -1,3 +1,4 @@
+from datetime import datetime
 import json
 import os
 import time
@@ -5,7 +6,7 @@ from dotenv import load_dotenv
 from groq import Groq, RateLimitError
 import sys
 
-from engine.tools.ingestion import check_ingestion_state
+from engine.tools.ingestion import check_ingestion_state, get_db
 from engine.tools.query import get_all_settlement_ids
 from engine.tools.resolution import get_verdict_summary, get_decisions
 from engine.tools.registry import (
@@ -198,11 +199,27 @@ def run_reconciliation(session_id: str) -> dict:
     total = len(settlement_ids)
     print(f"Processing {total} settlements...")
 
+    conn = get_db(session_id)
+    conn.execute("""
+        INSERT OR REPLACE INTO reconciliation_progress
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+    """, [session_id, 0, total, None, 'running',
+          datetime.utcnow(), datetime.utcnow()])
+    conn.close()
+
     # Step 3: Investigate each settlement
     for i, settlement_id in enumerate(settlement_ids):
         print(f"  [{i+1}/{total}] {settlement_id}...", end=" ", flush=True)
         verdict = run_settlement_investigation(session_id, settlement_id)
         print(verdict.get("verdict", "unknown"), flush=True)
+        conn = get_db(session_id)
+        conn.execute("""
+            INSERT OR REPLACE INTO reconciliation_progress
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        """, [session_id, i+1, total, settlement_id, 'running',
+              conn.execute("SELECT started_at FROM reconciliation_progress WHERE session_id=?",
+              [session_id]).fetchone()[0], datetime.utcnow()])
+        conn.close()
         time.sleep(3)
 
     # Step 4: Flag orphan bank credits
@@ -242,6 +259,15 @@ def run_reconciliation(session_id: str) -> dict:
 
     if orphan_count:
         print(f"  {orphan_count} orphan bank credit(s) flagged")
+
+    conn = get_db(session_id)
+    conn.execute("""
+        INSERT OR REPLACE INTO reconciliation_progress
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+    """, [session_id, total, total, None, 'completed',
+          conn.execute("SELECT started_at FROM reconciliation_progress WHERE session_id=?",
+          [session_id]).fetchone()[0], datetime.utcnow()])
+    conn.close()
 
     # Step 5: Report
     summary = get_verdict_summary(session_id)

@@ -45,6 +45,19 @@ def init_schema(conn: duckdb.DuckDBPyConnection) -> None:
         )
     """)
 
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS reconciliation_progress (
+            session_id    VARCHAR,
+            processed     INTEGER,
+            total         INTEGER,
+            current_id    VARCHAR,
+            status        VARCHAR,   -- 'running' | 'completed' | 'failed'
+            started_at    TIMESTAMP,
+            updated_at    TIMESTAMP,
+            PRIMARY KEY (session_id)
+        )
+    """)
+
 def _record_ingestion_state(
     conn: duckdb.DuckDBPyConnection,
     session_id: str,
