@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RazorRecon — AI Finance Controller</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <div class="container">
+    <!-- HEADER -->
+    <header>
+      <div class="brand">
+        <div class="brand-title-wrap">
+          <h1>RazorRecon</h1>
+          <span class="badge-tag">AI Finance Controller</span>
+        </div>
+        <p>Three-way automated reconciliation for Razorpay settlements</p>
+      </div>
+      <div class="session-badge" id="session-badge-container">
+        <span class="pulse-dot"></span>
+        <span>Session: <strong id="session-id-display">Connecting...</strong></span>
+      </div>
+    </header>
+
+    <!-- ERROR BANNER -->
+    <div class="error-banner" id="global-error-banner">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      <span id="global-error-text">An error occurred.</span>
+    </div>
+
+    <!-- 1. UPLOAD SECTION -->
+    <section id="upload-section" class="section active">
+      <h2 class="section-title">Upload Financial Statements</h2>
+      <p class="section-subtitle">Provide all 3 sources to perform end-to-end multi-way reconciliation.</p>
+
+      <div class="upload-grid">
+        <!-- Card 1: Payments CSV -->
+        <div class="upload-card" id="card-payments">
+          <input type="file" id="file-payments" accept=".csv" />
+          <div class="upload-icon-box">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+          </div>
+          <h3>Payments CSV</h3>
+          <p>Individual order transactions (.csv)</p>
+          <div class="upload-status" id="status-payments">Click or drag CSV here</div>
+        </div>
+
+        <!-- Card 2: Settlements CSV -->
+        <div class="upload-card" id="card-settlements">
+          <input type="file" id="file-settlements" accept=".csv" />
+          <div class="upload-icon-box">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+          </div>
+          <h3>Settlements CSV</h3>
+          <p>Razorpay batched payout reports (.csv)</p>
+          <div class="upload-status" id="status-settlements">Click or drag CSV here</div>
+        </div>
+
+        <!-- Card 3: Bank Statement CSV / PDF -->
+        <div class="upload-card" id="card-bank">
+          <input type="file" id="file-bank" accept=".csv, .pdf" />
+          <div class="upload-icon-box">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+          </div>
+          <h3>Bank Statement</h3>
+          <p>Actual bank account credits (.csv, .pdf)</p>
+          <div class="upload-status" id="status-bank">Click or drag CSV or PDF here</div>
+        </div>
+      </div>
+
+      <div class="action-row">
+        <button id="btn-start-reconcile" class="btn-primary" disabled onclick="startReconciliation()">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+          Start Reconciliation
+        </button>
+      </div>
+    </section>
+
+    <!-- 2. PROGRESS SECTION -->
+    <section id="progress-section" class="section">
+      <div class="progress-header">
+        <h2>Reconciling Transactions</h2>
+        <p>AI Investigator is cross-referencing orders, batched payouts, and bank credits.</p>
+      </div>
+
+      <div class="progress-percent" id="progress-percent-text">0%</div>
+
+      <div class="progress-bar-container">
+        <div class="progress-bar-fill" id="progress-bar-fill"></div>
+      </div>
+
+      <div class="progress-subtext" id="progress-counts-text">Processing settlements... 0 / 0</div>
+
+      <div>
+        <div class="current-settlement-pill" id="current-settlement-pill">
+          <span class="active-dot"></span>
+          <span id="current-settlement-text">Initializing investigation...</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. RESULTS SECTION -->
+    <section id="results-section" class="section">
+      <div class="summary-grid">
+        <div class="summary-card green">
+          <div class="summary-label">
+            <span>Confirmed Matches</span>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+          </div>
+          <div class="summary-value" id="summary-confirmed">0</div>
+          <div class="summary-desc">Fully verified across all hops</div>
+        </div>
+
+        <div class="summary-card yellow">
+          <div class="summary-label">
+            <span>Ambiguous</span>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          </div>
+          <div class="summary-value" id="summary-ambiguous">0</div>
+          <div class="summary-desc">Multiple candidate matches</div>
+        </div>
+
+        <div class="summary-card red">
+          <div class="summary-label">
+            <span>Unresolved</span>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+          </div>
+          <div class="summary-value" id="summary-unresolved">0</div>
+          <div class="summary-desc">Strategies exhausted / orphan credits</div>
+        </div>
+
+        <div class="summary-card blue">
+          <div class="summary-label">
+            <span>Match Rate</span>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+          </div>
+          <div class="summary-value" id="summary-match-rate">0%</div>
+          <div class="summary-desc" id="summary-coverage-desc">Coverage: 0%</div>
+        </div>
+      </div>
+
+      <!-- TABS NAVIGATION -->
+      <div class="tabs-nav">
+        <button class="tab-btn active" onclick="switchTab('confirmed')">
+          Confirmed <span class="tab-count-pill" id="tab-count-confirmed">0</span>
+        </button>
+        <button class="tab-btn" onclick="switchTab('ambiguous')">
+          Ambiguous <span class="tab-count-pill" id="tab-count-ambiguous">0</span>
+        </button>
+        <button class="tab-btn" onclick="switchTab('unresolved')">
+          Unresolved <span class="tab-count-pill" id="tab-count-unresolved">0</span>
+        </button>
+      </div>
+
+      <!-- TAB 1: CONFIRMED -->
+      <div id="tab-pane-confirmed" class="tab-pane active">
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Record ID</th>
+                <th>Expected Amount</th>
+                <th>Actual Amount</th>
+                <th>Strategy</th>
+                <th>Reasoning</th>
+              </tr>
+            </thead>
+            <tbody id="tbody-confirmed">
+              <tr><td colspan="5" class="empty-state">No confirmed records found.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- TAB 2: AMBIGUOUS -->
+      <div id="tab-pane-ambiguous" class="tab-pane">
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Record ID</th>
+                <th>Competing Explanations</th>
+                <th>Strategies Tried</th>
+                <th>Reasoning</th>
+              </tr>
+            </thead>
+            <tbody id="tbody-ambiguous">
+              <tr><td colspan="4" class="empty-state">No ambiguous records.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- TAB 3: UNRESOLVED -->
+      <div id="tab-pane-unresolved" class="tab-pane">
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Record ID</th>
+                <th>Strategies Tried</th>
+                <th>Reasoning</th>
+              </tr>
+            </thead>
+            <tbody id="tbody-unresolved">
+              <tr><td colspan="3" class="empty-state">No unresolved records.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- COLLAPSIBLE: BANK CHARGES EXCLUDED -->
+      <div class="collapsible-card" id="charges-collapsible">
+        <div class="collapsible-header" onclick="toggleChargesCollapsible()">
+          <div class="collapsible-title-wrap">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+            <span class="collapsible-title">Bank Charges Excluded</span>
+            <span class="collapsible-meta" id="charges-meta-text">(0 items · ₹0.00 total)</span>
+          </div>
+          <svg class="chevron-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+        </div>
+        <div class="collapsible-body">
+          <table>
+            <thead>
+              <tr>
+                <th>Transaction ID</th>
+                <th>Date</th>
+                <th>Narration</th>
+                <th>Debit Amount</th>
+              </tr>
+            </thead>
+            <tbody id="tbody-charges">
+              <tr><td colspan="4" class="empty-state">No bank charges detected.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- FOOTER -->
+      <div class="results-footer">
+        <button class="btn-secondary" onclick="startNewReconciliation()">
+          Start New Reconciliation
+        </button>
+      </div>
+    </section>
+  </div>
+
+  <script src="dashboard.js"></script>
+</body>
+</html>
