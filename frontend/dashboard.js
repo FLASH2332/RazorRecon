@@ -354,6 +354,48 @@ function toggleChargesCollapsible() {
   card.classList.toggle("open");
 }
 
+// 6. Load Existing Session (Dev/Debug)
+async function loadExistingSession(targetId) {
+  const sid = (targetId || (document.getElementById("debug-session-input") && document.getElementById("debug-session-input").value) || "").trim();
+  if (!sid) {
+    showError("Please enter a valid Session ID to load.");
+    return;
+  }
+  clearError();
+
+  const loadBtn = document.getElementById("btn-load-session");
+  const originalText = loadBtn ? loadBtn.textContent : "";
+  if (loadBtn) {
+    loadBtn.textContent = "Loading...";
+    loadBtn.disabled = true;
+  }
+
+  try {
+    const res = await fetch(`${API_BASE_URL}/sessions/${sid}/report`);
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      throw new Error(errData.detail || `Failed to load report for session ${sid} (HTTP ${res.status})`);
+    }
+    const report = await res.json();
+    sessionId = sid;
+    const sessionDisplay = document.getElementById("session-id-display");
+    if (sessionDisplay) sessionDisplay.textContent = sid;
+
+    // Skip upload and progress screens entirely
+    document.getElementById("upload-section").classList.remove("active");
+    document.getElementById("progress-section").classList.remove("active");
+    showResults(report);
+  } catch (err) {
+    console.error("loadExistingSession error:", err);
+    showError(err.message);
+  } finally {
+    if (loadBtn) {
+      loadBtn.textContent = originalText;
+      loadBtn.disabled = false;
+    }
+  }
+}
+
 // Reset / Start new
 function startNewReconciliation() {
   window.location.reload();
@@ -373,4 +415,13 @@ function escapeHtml(str) {
 window.addEventListener("DOMContentLoaded", () => {
   createSession();
   setupFileInputs();
+
+  const debugInput = document.getElementById("debug-session-input");
+  if (debugInput) {
+    debugInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        loadExistingSession();
+      }
+    });
+  }
 });

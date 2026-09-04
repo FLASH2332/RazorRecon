@@ -117,6 +117,66 @@ header {
   box-shadow: 0 0 8px var(--green);
 }
 
+/* DEV DEBUG BAR */
+.debug-bar {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: -18px;
+  margin-bottom: 24px;
+  padding: 5px 12px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+  font-size: 11px;
+  color: var(--text-dim);
+}
+
+.debug-label {
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: #71717a;
+}
+
+.debug-bar input[type="text"] {
+  background: #141414;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 11px;
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--text);
+  width: 170px;
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+
+.debug-bar input[type="text"]:focus {
+  border-color: #52525b;
+}
+
+.debug-bar button {
+  background: #27272a;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-muted);
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.debug-bar button:hover:not(:disabled) {
+  background: #3f3f46;
+  color: var(--text);
+}
+
+.debug-bar button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 /* SECTION BASICS */
 .section {
   display: none;

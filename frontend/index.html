@@ -27,6 +27,13 @@
       </div>
     </header>
 
+    <!-- DEV DEBUG BAR -->
+    <div class="debug-bar" id="dev-debug-bar">
+      <span class="debug-label">DEV:</span>
+      <input type="text" id="debug-session-input" placeholder="Session ID (e.g. 05484dc5)" />
+      <button type="button" id="btn-load-session" onclick="loadExistingSession()">Load Session</button>
+    </div>
+
     <!-- ERROR BANNER -->
     <div class="error-banner" id="global-error-banner">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
