@@ -184,48 +184,30 @@ def run_settlement_investigation(
     session_id: str,
     settlement_id: str,
 ) -> dict:
-    messages = [
-        {"role": "system", "content": SYSTEM_PROMPT},
-        {
-            "role": "user",
-            "content": (
-                f"Investigate settlement {settlement_id}. "
-                f"Use tools to gather evidence and submit your verdict."
-            ),
-        },
-    ]
-
+    state = {
+        "settlement_id": settlement_id,
+        "tools_called": [],
+        "verdict": None
+    }
+    last_tool_result = None
     verdict_reached = False
 
     for iteration in range(MAX_ITERATIONS):
-        if len(messages) > 10:
-            messages = messages[:2] + messages[-6:]
+        user_content = f"Investigate settlement {settlement_id}.\n\n" + build_state_summary(state)
+        if last_tool_result is not None:
+            user_content += f"\n\nLast tool result:\n{json.dumps(last_tool_result, default=str)}"
+
+        messages = [
+            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "user", "content": user_content}
+        ]
 
         response = call_groq_with_retry(messages, GROQ_TOOL_SCHEMAS)
-
         message = response.choices[0].message
 
         if not message.tool_calls:
             break
 
-        # Append assistant message
-        messages.append({
-            "role": "assistant",
-            "content": message.content or "",
-            "tool_calls": [
-                {
-                    "id": tc.id,
-                    "type": "function",
-                    "function": {
-                        "name": tc.function.name,
-                        "arguments": tc.function.arguments,
-                    },
-                }
-                for tc in message.tool_calls
-            ],
-        })
-
-        # Execute each tool call
         for tool_call in message.tool_calls:
             tool_name = tool_call.function.name
             try:
@@ -241,36 +223,29 @@ def run_settlement_investigation(
             else:
                 tool_result = {"error": f"Unknown tool: {tool_name}"}
 
-            messages.append({
-                "role": "tool",
-                "tool_call_id": tool_call.id,
-                "content": json.dumps(tool_result, default=str),
-            })
+            key = extract_key_result(tool_name, tool_result)
+            state["tools_called"].append({"tool": tool_name, "key_result": key})
+            last_tool_result = tool_result
 
             if tool_name == "submit_verdict":
+                state["verdict"] = tool_result.get("verdict") if isinstance(tool_result, dict) else None
                 verdict_reached = True
 
         if verdict_reached:
             break
 
-    # Force unresolved if max iterations exceeded
     if not verdict_reached:
         tool_mark_unresolved(
             record_id=settlement_id,
             strategies_tried=["max_iterations_exceeded"],
-            reasoning=f"Agent reached {MAX_ITERATIONS} iterations without submitting a verdict.",
+            reasoning=f"Agent reached {MAX_ITERATIONS} iterations without verdict."
         )
 
-    # Return verdict from log
     decisions = get_decisions(session_id)
     for d in reversed(decisions):
         if d["record_id"] == settlement_id:
             return d
-    return {
-        "record_id": settlement_id,
-        "verdict": "unresolved",
-        "reason": "no decision logged",
-    }
+    return {"record_id": settlement_id, "verdict": "unresolved", "reason": "no decision logged"}
 
 
 def run_reconciliation(session_id: str) -> dict:
