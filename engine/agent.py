@@ -3,6 +3,7 @@ import os
 import time
 from dotenv import load_dotenv
 from groq import Groq, RateLimitError
+import sys
 
 from engine.tools.ingestion import check_ingestion_state
 from engine.tools.query import get_all_settlement_ids
@@ -202,6 +203,7 @@ def run_reconciliation(session_id: str) -> dict:
         print(f"  [{i+1}/{total}] {settlement_id}...", end=" ", flush=True)
         verdict = run_settlement_investigation(session_id, settlement_id)
         print(verdict.get("verdict", "unknown"), flush=True)
+        time.sleep(3)
 
     # Step 4: Flag orphan bank credits
     all_decisions = get_decisions(session_id)
@@ -266,7 +268,7 @@ if __name__ == "__main__":
     init_schema(conn)
     conn.close()
 
-    base = "data/sample/small"
+    base = sys.argv[1] if len(sys.argv) > 1 else "data/sample/small"
     ingest_payments(session_id, f"{base}/payments_messy.csv")
     ingest_settlements(session_id, f"{base}/settlements_messy.csv")
     ingest_bank(session_id, f"{base}/bank_statement_messy.csv")
