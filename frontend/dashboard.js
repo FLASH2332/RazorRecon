@@ -258,7 +258,7 @@ function showResults(report) {
           <td class="amount-cell">${expected}</td>
           <td class="amount-cell">${actual}</td>
           <td><span class="strategy-badge">${escapeHtml(strategy)}</span></td>
-          <td class="reasoning-cell" title="${escapeHtml(reasoning)}">${escapeHtml(reasoning)}</td>
+          <td class="reasoning-cell">${escapeHtml(reasoning)}</td>
         </tr>
       `;
     }).join("");
@@ -282,9 +282,9 @@ function showResults(report) {
       return `
         <tr>
           <td class="mono-cell">${escapeHtml(r.record_id)}</td>
-          <td class="reasoning-cell" title="${escapeHtml(competingStr)}">${escapeHtml(competingStr)}</td>
+          <td class="reasoning-cell">${escapeHtml(competingStr)}</td>
           <td><span class="strategy-badge">${escapeHtml(strategies)}</span></td>
-          <td class="reasoning-cell" title="${escapeHtml(reasoning)}">${escapeHtml(reasoning)}</td>
+          <td class="reasoning-cell">${escapeHtml(reasoning)}</td>
         </tr>
       `;
     }).join("");
@@ -303,7 +303,7 @@ function showResults(report) {
         <tr>
           <td class="mono-cell">${escapeHtml(r.record_id)}</td>
           <td><span class="strategy-badge">${escapeHtml(strategies)}</span></td>
-          <td class="reasoning-cell" title="${escapeHtml(reasoning)}">${escapeHtml(reasoning)}</td>
+          <td class="reasoning-cell">${escapeHtml(reasoning)}</td>
         </tr>
       `;
     }).join("");
